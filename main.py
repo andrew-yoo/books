@@ -10,8 +10,9 @@ CSV = "archive.csv"
 
 
 class Book:
-    def __init__(self, title, edition, authors, isbn, subject, field):
+    def __init__(self, title, subtitle, edition, authors, isbn, subject, field):
         self.title = title
+        self.subtitle = subtitle
         self.edition = edition
         self.authors = authors
         self.isbn = isbn
@@ -36,6 +37,7 @@ class Book:
         else:
             x = xxhash.xxh64()
             x.update(bytes(self.title, "utf-8"))
+            x.update(bytes(self.subtitle, "utf-8"))
             x.update(bytes(self.edition, "utf-8"))
 
             for author in self.authors:
@@ -77,6 +79,7 @@ def build(source, book, folder):
 def archive(book):
     line = {
         "title": book.title,
+        "subtitle": book.subtitle,
         "edition": book.edition,
         "authors": book.authors,
         "isbn": book.isbn,
@@ -96,6 +99,7 @@ def archive(book):
     with open(CSV, "a", newline="") as file:
         fieldnames = [
             "title",
+            "subtitle",
             "edition",
             "authors",
             "isbn",
@@ -119,6 +123,7 @@ def main():
         path = other
 
         title = input("Title: ").lower().strip()
+        subtitle = input("Subtitle: ").lower().strip()
         edition = input("Edition: ").lower().strip()
         authors = [
             a.strip() for a in input("Authors (comma-separated): ").lower().split(",")
@@ -127,7 +132,7 @@ def main():
         subject = input("Subject: ").lower().strip()
         field = input("Field: ").lower().strip()
 
-        new_book = Book(title, edition, authors, isbn, subject, field)
+        new_book = Book(title, subtitle, edition, authors, isbn, subject, field)
 
         # Build the book
 
