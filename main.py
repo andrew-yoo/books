@@ -52,11 +52,15 @@ def parse():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-a", "--add", help="add an ebook")
+    parser.add_argument("-r", "--remove", help="remove an ebook")
 
     args = parser.parse_args()
 
     if args.add:
         return "add", args.add
+
+    elif args.remove:
+        return "remove", args.remove
 
     return None, None
 
@@ -141,6 +145,69 @@ def main():
 
         else:
             print("\nAborted: file not found.")
+
+    elif mode == "remove":
+        id_to_remove = other.strip()
+
+        if id_to_remove == "":
+            print("Error: no id provided for removal.")
+            return
+
+        # Read archive and keep rows that do not match the id
+        entries = []
+        found = False
+
+        if not os.path.exists(CSV):
+            print(f'Archive file "{CSV}" not found.')
+            return
+
+        with open(CSV, newline="") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row.get("id") == id_to_remove:
+                    found = True
+                else:
+                    entries.append(row)
+
+        if not found:
+            print(f"No entry with id {id_to_remove} found in archive.")
+            return
+
+        # Write back filtered archive
+        fieldnames = [
+            "title",
+            "subtitle",
+            "edition",
+            "authors",
+            "isbn",
+            "subject",
+            "field",
+            "id",
+        ]
+
+        try:
+            with open(CSV, "w", newline="") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for r in entries:
+                    writer.writerow(r)
+        except OSError as e:
+            print(f"Failed to update archive: {e}")
+            return
+
+        # Remove the PDF file if present
+        pdf_path = os.path.join(FOLDER, id_to_remove + ".pdf")
+        if os.path.exists(pdf_path):
+            try:
+                os.remove(pdf_path)
+                print(f"Removed file {pdf_path}")
+            except OSError as e:
+                print(f"Removed archive entry but failed to delete file: {e}")
+                return
+        else:
+            print("Removed archive entry; no file found to remove.")
+
+        print("Removal complete.")
 
 
 if __name__ == "__main__":
