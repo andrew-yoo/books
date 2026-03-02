@@ -18,7 +18,7 @@ class Book:
         self.subject = subject
         self.field = field
 
-    def id(self):
+    def hash_id(self):
         """Create a 64-bit ID for a book using XXHash64.
 
         If an ISBN exists, it will be used as the seed. If no ISBN exists, the title, edition, and author will be concatenated and used as the seed.
@@ -66,7 +66,7 @@ def build(source, book, folder):
         return False
 
     os.makedirs(folder, exist_ok=True)
-    destination = os.path.join(folder, book.id() + ".pdf")
+    destination = os.path.join(folder, book.hash_id() + ".pdf")
 
     shutil.copy2(source, destination)
     print(f"Copied to {destination}")
@@ -82,8 +82,16 @@ def archive(book):
         "isbn": book.isbn,
         "subject": book.subject,
         "field": book.field,
-        "id": book.id(),
+        "id": book.hash_id(),
     }
+
+    file_exists = os.path.exists(CSV)
+    file_empty = True
+    if file_exists:
+        try:
+            file_empty = os.path.getsize(CSV) == 0
+        except OSError:
+            file_empty = True
 
     with open(CSV, "a", newline="") as file:
         fieldnames = [
@@ -97,6 +105,9 @@ def archive(book):
         ]
 
         writer = csv.DictWriter(file, fieldnames=fieldnames)
+
+        if not file_exists or file_empty:
+            writer.writeheader()
 
         writer.writerow(line)
 
