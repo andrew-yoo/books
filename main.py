@@ -5,8 +5,8 @@ import xxhash
 import csv
 
 
-FOLDER = "books"
-CSV = "archive.csv"
+FOLDER = "library"
+CSV = "catalog.csv"
 
 
 class Book:
@@ -53,6 +53,12 @@ def parse():
 
     parser.add_argument("-a", "--add", help="add an ebook")
     parser.add_argument("-r", "--remove", help="remove an ebook")
+    parser.add_argument(
+        "-s", "--search", action="store_true", help="search for an ebook"
+    )
+    parser.add_argument(
+        "-f", "--filter", action="store_true", help="filter for exact matches"
+    )
 
     args = parser.parse_args()
 
@@ -61,6 +67,12 @@ def parse():
 
     elif args.remove:
         return "remove", args.remove
+
+    elif args.search:
+        return "search", None
+
+    elif args.filter:
+        return "filter", None
 
     return None, None
 
@@ -208,6 +220,12 @@ def main():
             print("Removed archive entry; no file found to remove.")
 
         print("Removal complete.")
+
+    elif mode == "search":
+        pass
+
+    elif mode == "filter":
+        pass
 
 
 if __name__ == "__main__":
