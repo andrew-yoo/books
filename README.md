@@ -8,6 +8,7 @@ The CLI is located at `main.py`.
 
 - Add a book with `--add`
 - Remove a book with `--remove`
+- Search for a book with `--search`
 
 I haven't figured out searching yet; I should have probably just used SQLite...
 

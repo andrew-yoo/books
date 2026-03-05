@@ -1,12 +1,13 @@
 import argparse
 import os
 import shutil
-import xxhash
 import csv
+import xxhash
+import duckdb
 
 
-FOLDER = "books"
-CSV = "archive.csv"
+FOLDER = "library"
+CSV = "catalog.csv"
 
 
 class Book:
@@ -53,6 +54,12 @@ def parse():
 
     parser.add_argument("-a", "--add", help="add an ebook")
     parser.add_argument("-r", "--remove", help="remove an ebook")
+    parser.add_argument(
+        "-s", "--search", action="store_true", help="search for an ebook"
+    )
+    parser.add_argument(
+        "-f", "--filter", action="store_true", help="filter for exact matches"
+    )
 
     args = parser.parse_args()
 
@@ -61,6 +68,12 @@ def parse():
 
     elif args.remove:
         return "remove", args.remove
+
+    elif args.search:
+        return "search", None
+
+    elif args.filter:
+        return "filter", None
 
     return None, None
 
@@ -80,6 +93,26 @@ def build(source, book, folder):
     return True
 
 
+FIELDNAMES = [
+    "title",
+    "subtitle",
+    "edition",
+    "authors",
+    "isbn",
+    "subject",
+    "field",
+    "id",
+]
+
+
+def require_catalog():
+    """Return True if the catalog CSV exists, otherwise print an error and return False."""
+    if not os.path.exists(CSV):
+        print(f'Error: catalog "{CSV}" not found.')
+        return False
+    return True
+
+
 def archive(book):
     line = {
         "title": book.title,
@@ -92,32 +125,38 @@ def archive(book):
         "id": book.hash_id(),
     }
 
-    file_exists = os.path.exists(CSV)
-    file_empty = True
-    if file_exists:
-        try:
-            file_empty = os.path.getsize(CSV) == 0
-        except OSError:
-            file_empty = True
-
     with open(CSV, "a", newline="") as file:
-        fieldnames = [
-            "title",
-            "subtitle",
-            "edition",
-            "authors",
-            "isbn",
-            "subject",
-            "field",
-            "id",
-        ]
+        writer = csv.DictWriter(file, fieldnames=FIELDNAMES)
 
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-
-        if not file_exists or file_empty:
+        if file.tell() == 0:
             writer.writeheader()
 
         writer.writerow(line)
+
+
+FILTER_FIELDS = [
+    ("Title", "title", "lower(title) = lower(?)"),
+    ("Author", "authors", "authors ILIKE '%' || ? || '%'"),
+    ("ISBN", "isbn", "isbn = ?"),
+    ("Subject", "subject", "lower(subject) = lower(?)"),
+    ("Field", "field", "lower(field) = lower(?)"),
+]
+
+SEARCH_COLS = ["title", "subtitle", "authors", "subject", "field"]
+
+
+def run_query(query, params):
+    """Execute a DuckDB query against the catalog and print the results."""
+    con = duckdb.connect()
+    try:
+        rows = con.execute(query, params).fetchall()
+        if not rows:
+            print("No results")
+        else:
+            for r in rows:
+                print(r)
+    finally:
+        con.close()
 
 
 def main():
@@ -153,13 +192,12 @@ def main():
             print("Error: no id provided for removal.")
             return
 
+        if not require_catalog():
+            return
+
         # Read archive and keep rows that do not match the id
         entries = []
         found = False
-
-        if not os.path.exists(CSV):
-            print(f'Archive file "{CSV}" not found.')
-            return
 
         with open(CSV, newline="") as csvfile:
             reader = csv.DictReader(csvfile)
@@ -174,20 +212,9 @@ def main():
             return
 
         # Write back filtered archive
-        fieldnames = [
-            "title",
-            "subtitle",
-            "edition",
-            "authors",
-            "isbn",
-            "subject",
-            "field",
-            "id",
-        ]
-
         try:
             with open(CSV, "w", newline="") as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer = csv.DictWriter(csvfile, fieldnames=FIELDNAMES)
                 writer.writeheader()
                 for r in entries:
                     writer.writerow(r)
@@ -208,6 +235,55 @@ def main():
             print("Removed archive entry; no file found to remove.")
 
         print("Removal complete.")
+
+    elif mode == "search":
+        if not require_catalog():
+            return
+
+        keywords = input("Keywords: ").strip().split()
+        print("")
+
+        if not keywords:
+            print("No keywords provided.")
+            return
+
+        # Each keyword must match at least one searchable column (AND across keywords, OR across columns)
+        conditions = []
+        params = [CSV]
+        for kw in keywords:
+            col_checks = " OR ".join(
+                f"{col} ILIKE '%' || ? || '%'" for col in SEARCH_COLS
+            )
+            conditions.append(f"({col_checks})")
+            params.extend([kw] * len(SEARCH_COLS))
+
+        query = (
+            "SELECT title, subtitle, edition, authors, isbn, subject, field, id"
+            " FROM read_csv_auto(?)"
+            " WHERE " + " AND ".join(conditions) + " ORDER BY title"
+        )
+        run_query(query, params)
+
+    elif mode == "filter":
+        if not require_catalog():
+            return
+
+        inputs = [
+            (label, cond, input(f"{label}: ").strip())
+            for label, _, cond in FILTER_FIELDS
+        ]
+        print("")
+
+        conditions = [cond for _, cond, val in inputs if val]
+        params = [CSV] + [val for _, _, val in inputs if val]
+
+        query = (
+            "SELECT title, subtitle, edition, authors, isbn, subject, field, id"
+            " FROM read_csv_auto(?)"
+            + (" WHERE " + " AND ".join(conditions) if conditions else "")
+            + " ORDER BY title"
+        )
+        run_query(query, params)
 
 
 if __name__ == "__main__":
