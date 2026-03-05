@@ -9,12 +9,11 @@ The CLI is located at `main.py`.
 - Add a book with `--add`
 - Remove a book with `--remove`
 - Search for a book with `--search`
-
-I haven't figured out searching yet; I should have probably just used SQLite...
+- Filter for exact matches with `--filter`
 
 ## Folders
 
-A folder path can be specified in the `FOLDER` variable of the `main.py` file. This is where all the PDFs are stored. By default, the path is `books`.
+A folder path can be specified in the `FOLDER` variable of the `main.py` file. This is where all the PDFs are stored. By default, the path is `library`.
 
 File names are in hexadecimal to ensure path-safety. In the future, I may implement folder sharding, but it seems overkill for now.
 
