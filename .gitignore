@@ -12,6 +12,7 @@ wheels/
 # Private stuff
 *.pdf
 *.csv
+very_important.txt
 
 # IDK what this stuff is
 debug.log
