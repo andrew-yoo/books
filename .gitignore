@@ -12,6 +12,7 @@ wheels/
 # Private stuff
 *.pdf
 *.csv
+tests/
 very_important.txt
 
 # IDK what this stuff is
