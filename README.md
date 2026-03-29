@@ -1,6 +1,7 @@
 # books
 
-My system for archiving Ebook PDFs.
+My system for archiving Ebook PDFs. 
+Significant portions were vibecoded, especially the database management, so use at your own risk.
 
 ## Usage
 
