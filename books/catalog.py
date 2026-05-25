@@ -4,9 +4,11 @@ import shutil
 
 from .book import Book
 
-
-FOLDER = "library"
-CSV = "catalog.csv"
+# Keep the catalog and library folder inside the package so the entire
+# `books` folder can be moved/shared and the code still finds its data.
+BASE_DIR = "."
+FOLDER = os.path.join(BASE_DIR, "library")
+CSV = os.path.join(FOLDER, "_catalog.csv")
 
 FIELDNAMES = [
     "title",
